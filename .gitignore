@@ -1,0 +1,12 @@
+# Ignorer le dossier node_modules
+node_modules/
+.env
+
+# Ignorer les fichiers logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Ignorer les dossiers liés aux environnements de développement
+.env
+.DS_Store
