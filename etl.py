@@ -1,6 +1,5 @@
 import os, re, sys, time, logging, unicodedata
 from dataclasses import dataclass, field
-from datetime import datetime
 
 import requests
 import pandas as pd
@@ -34,7 +33,6 @@ class Config:
 
 
 class ExtractError(Exception): pass
-class TransformError(Exception): pass
 
 
 #EXTRACT
@@ -61,7 +59,7 @@ def extract(url: str, config: Config, max_results: int = 200) -> list[dict]:
     data    = fetch(url, config)
     records = data.get("products") or data.get("results") or data
  
-    # Pagination wger : next contient l'url de la page suivante
+    #Pagination wger : next contient l'url de la page suivante
     while len(records) < max_results and data.get("next"):
         data     = fetch(data["next"], config)
         records += data.get("results", [])
@@ -86,9 +84,6 @@ def sanitize(v):
 
 
 def transform_foods(raw: list[dict]) -> pd.DataFrame:
-    if not raw:
-        raise TransformError("Aucune donnée foods à transformer.")
-
     rows = []
     for item in raw:
         n = item.get("nutriments", {})
@@ -121,12 +116,9 @@ def transform_foods(raw: list[dict]) -> pd.DataFrame:
 
 
 def transform_exercises(raw: list[dict]) -> pd.DataFrame:
-    if not raw:
-        raise TransformError("Aucune donnée exercises à transformer.")
-
     rows = []
     for item in raw:
-        # Nom et description : dans translations[], on prend le français (language == 5) en priorité
+        #Nom et description : dans translations[], on prend le français (language == 5) en priorité
         translations = item.get("translations", [])
         lang = next((t for t in translations if t.get("language") == 5), None)
         if not lang:
@@ -138,6 +130,10 @@ def transform_exercises(raw: list[dict]) -> pd.DataFrame:
             "sport_exercise_name":        lang.get("name", ""),
             "sport_exercise_instruction": lang.get("description", ""),
         })
+
+    if not rows:
+        logger.warning("Aucun exercice valide trouvé.")
+        return pd.DataFrame()
 
     df = pd.DataFrame(rows)
 
@@ -182,12 +178,12 @@ def run(config: Config = None, engine=None) -> None:
     logger.info("Démarrage du pipeline.")
 
     try:
-        engine = engine or create_engine(config.db_url, pool_pre_ping=True)
+        engine = engine or create_engine(config.db_url)
 
         load(transform_foods(extract(config.apis["foods"], config)),         "ingredient",     engine)
         load(transform_exercises(extract(config.apis["exercises"], config)), "sport_exercise", engine)
 
-    except (ExtractError, TransformError, SQLAlchemyError) as e:
+    except (ExtractError, SQLAlchemyError) as e:
         logger.error(f"Pipeline interrompu : {e}")
         sys.exit(1)
 
