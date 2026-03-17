@@ -1,4 +1,6 @@
 .env
 etl.log
+exercise.log
+ingredient.log
 __pycache__/
 *.pyc
