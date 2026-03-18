@@ -1,15 +1,10 @@
-FROM node:22-alpine
+FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY package*.json ./
+COPY requirements.txt .
+RUN pip install -r requirements.txt
 
-# Installer toutes les dépendances, y compris devDependencies
-RUN npm install
+COPY etl.py .
 
-COPY . .
-
-EXPOSE 5001
-
-# Utiliser nodemon en dev, npm start sinon
-CMD ["sh", "-c", "if [ \"$NODE_ENV\" = 'development' ]; then npx nodemon app.js; else npm start; fi"]
+CMD ["python", "etl.py"]
