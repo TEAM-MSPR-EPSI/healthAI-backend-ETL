@@ -1,0 +1,7 @@
+2026-03-29 17:39:24,271 [INFO] — Connexion établie avec postgresql+psycopg2://postgres:postgres_password@postgres_db:5432/myapp_db
+2026-03-29 17:39:24,464 [INFO] — Connexion vérifiée.
+2026-03-29 17:39:24,465 [INFO] — Démarrage du chargement des CSV.
+2026-03-29 17:39:24,466 [ERROR] — Fichier CSV introuvable : /app/ingredient_valid.csv
+2026-03-29 17:39:24,476 [INFO] — Chargement de 200 lignes depuis exercise_valid.csv vers 'sport_exercise'...
+2026-03-29 17:39:24,654 [INFO] — 'sport_exercise' — 200 insérée(s), 0 ignorée(s) (doublons).
+2026-03-29 17:39:24,655 [INFO] — Chargement terminé avec succès.

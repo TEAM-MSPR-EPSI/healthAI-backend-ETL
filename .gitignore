@@ -2,6 +2,7 @@
 
 exercise.log
 ingredient.log
+etl_load.log
 
 ingredient_valid.csv
 ingredient_invalid.csv
