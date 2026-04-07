@@ -1,6 +1,13 @@
 .env
-etl.log
+
 exercise.log
 ingredient.log
+etl_load.log
+
+ingredient_valid.csv
+ingredient_invalid.csv
+exercise_valid.csv
+exercise_invalid.csv
+
 __pycache__/
 *.pyc

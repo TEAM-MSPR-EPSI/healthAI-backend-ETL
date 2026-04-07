@@ -2,8 +2,6 @@ import os, sys, time, logging
 from dataclasses import dataclass
 
 import requests
-from sqlalchemy import create_engine
-from sqlalchemy.exc import SQLAlchemyError
 from dotenv import load_dotenv
 
 import etl_ingredient
@@ -76,17 +74,21 @@ def run_pipeline(name: str, etl_module, config: Config, engine) -> None:
     start = time.perf_counter()
     try:
         raw = extract(etl_module.API_URL, config)
-        df  = etl_module.transform(raw)
-        etl_module.load(df, engine)
-    except (ExtractError, SQLAlchemyError) as e:
+        valid_df, invalid_df = etl_module.transform(raw)
+        etl_module.load(valid_df, invalid_df, engine)
+    except ExtractError as e:
         mod_logger.error(f"Pipeline interrompu : {e}")
+    except Exception as e:
+        mod_logger.error(f"Pipeline interrompu : {e}")
+    finally:
         mod_logger.info(f"Pipeline ETL terminé en {time.perf_counter() - start:.2f}s.")
 
 
 def run() -> None:
     config = Config()
 
-    engine = create_engine(config.db_url)
+    #Insertion BDD temporairement désactivée (remplacée par export CSV)
+    engine = None
 
     run_pipeline("ingredient", etl_ingredient, config, engine)
     run_pipeline("exercise",   etl_exercise,   config, engine)

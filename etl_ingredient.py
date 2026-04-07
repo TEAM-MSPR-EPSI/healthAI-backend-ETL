@@ -1,12 +1,13 @@
+import os
 import re, logging, unicodedata
 import pandas as pd
-from sqlalchemy import text
-from sqlalchemy.exc import SQLAlchemyError
 
 #Logs dans ingredient.log
 logger = logging.getLogger("ETL.ingredient")
 
-handler = logging.FileHandler("ingredient.log", encoding="utf-8")
+OUTPUT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+handler = logging.FileHandler(os.path.join(OUTPUT_DIR, "ingredient.log"), encoding="utf-8")
 handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] — %(message)s"))
 logger.addHandler(handler)
 
@@ -26,7 +27,7 @@ def _sanitize(v):
     return re.sub(r" +", " ", v).strip()
 
 
-def transform(raw: list[dict]) -> pd.DataFrame:
+def transform(raw: list[dict]) -> tuple[pd.DataFrame, pd.DataFrame]:
     #Aplatit le JSON nutriments et nettoie les données
     rows = []
     for item in raw:
@@ -49,33 +50,55 @@ def transform(raw: list[dict]) -> pd.DataFrame:
         "ingredient_salt_100g", "ingredient_saturated_fats_100g"
     ]
 
+    if not rows:
+        logger.warning("Aucun ingredient brut trouvé.")
+        return pd.DataFrame(), pd.DataFrame()
+
     df = pd.DataFrame(rows)
-    df["ingredient_name"] = df["ingredient_name"].map(_sanitize).str.title()
-    #Supprime les lignes sans nom et celles où tous les nutriments sont null
-    df = df[df["ingredient_name"].str.strip() != ""]
-    df = df.dropna(subset=num_cols, how="all")
+    df["ingredient_name"] = df["ingredient_name"].map(_sanitize).fillna("").str.title()
     df[num_cols] = df[num_cols].apply(pd.to_numeric, errors="coerce")
 
-    logger.info(f"ingredient prêt : {len(df)} lignes.")
-    return df
+    #Conserve les lignes non conformes pour export CSV au lieu de les supprimer définitivement
+    name_empty = df["ingredient_name"].str.strip() == ""
+    nutrients_empty = df[num_cols].isna().all(axis=1)
+
+    invalid_df = df[name_empty | nutrients_empty].copy()
+    invalid_df["rejection_reason"] = ""
+    invalid_df.loc[name_empty, "rejection_reason"] = invalid_df.loc[name_empty, "rejection_reason"] + "nom_vide;"
+    invalid_df.loc[nutrients_empty, "rejection_reason"] = invalid_df.loc[nutrients_empty, "rejection_reason"] + "nutriments_vides;"
+    invalid_df["rejection_reason"] = invalid_df["rejection_reason"].str.rstrip(";")
+
+    valid_df = df[~(name_empty | nutrients_empty)].copy()
+
+    logger.info(f"ingredient prêt : {len(valid_df)} lignes valides, {len(invalid_df)} rejetées.")
+    return valid_df, invalid_df
 
 
-def load(df: pd.DataFrame, engine) -> None:
-    if df.empty:
-        logger.warning("DataFrame vide, rien à insérer dans 'ingredient'.")
-        return
+def load(valid_df: pd.DataFrame, invalid_df: pd.DataFrame, engine=None) -> None:
+    valid_path = os.path.join(OUTPUT_DIR, "ingredient_valid.csv")
+    invalid_path = os.path.join(OUTPUT_DIR, "ingredient_invalid.csv")
 
-    cols = ", ".join(df.columns)
-    vals = ", ".join(f":{c}" for c in df.columns)
+    valid_df.to_csv(valid_path, index=False, encoding="utf-8")
+    invalid_df.to_csv(invalid_path, index=False, encoding="utf-8")
+
+    logger.info(f"CSV valides écrit : {valid_path} ({len(valid_df)} lignes).")
+    logger.info(f"CSV rejetés écrit : {invalid_path} ({len(invalid_df)} lignes).")
+
+    #Insertion BDD temporairement désactivée (remplacée par export CSV)
+    #if valid_df.empty:
+    #    logger.warning("DataFrame vide, rien à insérer dans 'ingredient'.")
+    #    return
+    #    # cols = ", ".join(valid_df.columns)
+    #vals = ", ".join(f":{c}" for c in valid_df.columns)
     #ON CONFLICT DO NOTHING : les doublons sont ignorés
-    sql  = text(f"INSERT INTO ingredient ({cols}) VALUES ({vals}) ON CONFLICT DO NOTHING")
-
-    try:
-        with engine.begin() as conn:
-            result   = conn.execute(sql, df.to_dict(orient="records"))
-            inserted = result.rowcount
-            skipped  = len(df) - inserted
-        logger.info(f"'ingredient' — {inserted} insérées, {skipped} ignorées (doublons).")
-    except SQLAlchemyError as e:
-        logger.error(f"Erreur insertion 'ingredient' : {e}")
-        raise
+    #sql  = text(f"INSERT INTO ingredient ({cols}) VALUES ({vals}) ON CONFLICT DO NOTHING")
+    #
+    #try:
+    #    with engine.begin() as conn:
+    #        result   = conn.execute(sql, valid_df.to_dict(orient="records"))
+    #        inserted = result.rowcount
+    #        skipped  = len(valid_df) - inserted
+    #    logger.info(f"'ingredient' — {inserted} insérées, {skipped} ignorées (doublons).")
+    #except SQLAlchemyError as e:
+    #    logger.error(f"Erreur insertion 'ingredient' : {e}")
+    #    raise
