@@ -37,7 +37,19 @@ class ExtractError(Exception): pass
 def fetch(url: str, config: Config) -> dict:
     for attempt in range(1, config.retries + 1):
         try:
-            r = requests.get(url, timeout=config.timeout)
+            auth = None
+            if "openfoodfacts.org" in url:
+                headers = {"User-Agent": "HealthAI-ETL - Windows - Version 1.0"}
+                
+                # Récupérer les credentials depuis les variables d'environnement
+                api_user = os.getenv("API_USER")
+                api_pass = os.getenv("API_PASSWORD")
+                if api_user and api_pass:
+                    auth = (api_user, api_pass)
+            else:
+                headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"}
+            
+            r = requests.get(url, timeout=config.timeout, headers=headers, auth=auth)
             r.raise_for_status()
             return r.json()
         except requests.exceptions.Timeout:
