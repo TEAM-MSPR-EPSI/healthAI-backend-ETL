@@ -82,7 +82,7 @@ def extract(url: str, config: Config, max_results: int = 200) -> list[dict]:
 #Si un ETL échoue, le suivant est quand meme exécuté
 def run_pipeline(name: str, etl_module, config: Config, engine) -> None:
     mod_logger = logging.getLogger(f"ETL.{name}")
-    mod_logger.info(f"Démarrage du pipeline ETL.")
+    mod_logger.info(f"Démarrage du pipeline ETL ({name}).")
     start = time.perf_counter()
     try:
         raw = extract(etl_module.API_URL, config)

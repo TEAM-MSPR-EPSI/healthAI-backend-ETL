@@ -39,9 +39,19 @@ async def health_check():
 
 @app.post("/etl/extract-transform")
 async def run_etl(background_tasks: BackgroundTasks):
-    logger.info("Démarrage du pipeline ETL (etl.py)...")
+    logger.info("=" * 100)
+    logger.info("DÉMARRAGE DU PIPELINE ETL (etl.py)")
+    logger.info("=" * 100)
     
     try:
+        logger.info("[ÉTAPE 1/4] Préparation du répertoire de travail...")
+        logger.info(f"  ├─ Répertoire: {OUTPUT_DIR}")
+        logger.info(f"  ├─ Script: {OUTPUT_DIR / 'etl.py'}")
+        logger.info(f"  └─ Timeout: 300 secondes\n")
+        
+        logger.info("[ÉTAPE 2/4] Exécution du script ETL...")
+        logger.info("-" * 100)
+        
         result = subprocess.run(
             ["python", str(OUTPUT_DIR / "etl.py")],
             cwd=str(OUTPUT_DIR),
@@ -50,25 +60,46 @@ async def run_etl(background_tasks: BackgroundTasks):
             timeout=300
         )
         
-        logger.info("Pipeline ETL exécuté.")
+        # ==== Logs du subprocess (messages détaillés d'etl.py) ====
+        if result.stdout.strip():
+            logger.info(result.stdout)
+        
+        if result.stderr.strip():
+            logger.warning(result.stderr)
+        
+        logger.info("-" * 100 + "\n")
+        
+        logger.info("[ÉTAPE 3/4] Vérification du résultat...")
+        logger.info(f"  ├─ Code de retour: {result.returncode}")
         
         if result.returncode != 0:
-            logger.error(f"Erreur ETL : {result.stderr}")
+            logger.error("  └─ ERREUR: Le script ETL a échoué\n")
             raise HTTPException(
                 status_code=500,
                 detail=f"Erreur lors de l'exécution du pipeline : {result.stderr}"
             )
         
+        logger.info("  └─ ✓ Code de retour valide (0)\n")
+        
+        logger.info("[ÉTAPE 4/4] Succès - Pipeline ETL complété")
+        logger.info("=" * 100)
+        logger.info("✓ Pipeline ETL terminé avec succès")
+        logger.info("=" * 100)
+        
         return {
             "status": "success",
             "message": "Pipeline ETL exécuté avec succès",
-            "logs": result.stdout,
+            "detailed_logs": result.stdout.strip().split('\n') if result.stdout.strip() else [],
+            "return_code": result.returncode,
         }
     
     except subprocess.TimeoutExpired:
-        raise HTTPException(status_code=504, detail="Timeout dépassé (5 minutes)")
+        logger.error("[TIMEOUT] Le pipeline ETL a dépassé 300 secondes")
+        logger.error("=" * 100)
+        raise HTTPException(status_code=504, detail="Timeout dépassé (300 secondes)")
     except Exception as e:
-        logger.error(f"Erreur non gérée : {e}")
+        logger.error(f"[ERREUR] Exception non gérée: {e}")
+        logger.error("=" * 100)
         raise HTTPException(status_code=500, detail=f"Erreur : {str(e)}")
 
 
@@ -98,9 +129,19 @@ async def list_csv_files():
 
 @app.post("/etl/load-to-db")
 async def load_csv_to_db():
-    logger.info("Démarrage du chargement en BDD (etl_load.py)...")
+    logger.info("=" * 100)
+    logger.info("DÉMARRAGE DU CHARGEMENT EN BASE DE DONNÉES (etl_load.py)")
+    logger.info("=" * 100)
     
     try:
+        logger.info("[ÉTAPE 1/4] Préparation du chargement...")
+        logger.info(f"  ├─ Répertoire: {OUTPUT_DIR}")
+        logger.info(f"  ├─ Script: {OUTPUT_DIR / 'etl_load.py'}")
+        logger.info(f"  └─ Timeout: 300 secondes\n")
+        
+        logger.info("[ÉTAPE 2/4] Exécution du script de chargement...")
+        logger.info("-" * 100)
+        
         result = subprocess.run(
             ["python", str(OUTPUT_DIR / "etl_load.py")],
             cwd=str(OUTPUT_DIR),
@@ -109,25 +150,46 @@ async def load_csv_to_db():
             timeout=300
         )
         
-        logger.info("Chargement BDD exécuté.")
+        # ==== Logs du subprocess (messages détaillés d'etl_load.py) ====
+        if result.stdout.strip():
+            logger.info(result.stdout)
+        
+        if result.stderr.strip():
+            logger.warning(result.stderr)
+        
+        logger.info("-" * 100 + "\n")
+        
+        logger.info("[ÉTAPE 3/4] Vérification du résultat...")
+        logger.info(f"  ├─ Code de retour: {result.returncode}")
         
         if result.returncode != 0:
-            logger.error(f"Erreur chargement BDD : {result.stderr}")
+            logger.error("  └─ ERREUR: Le script de chargement a échoué\n")
             raise HTTPException(
                 status_code=500,
                 detail=f"Erreur lors du chargement en BDD : {result.stderr}"
             )
         
+        logger.info("  └─ ✓ Code de retour valide (0)\n")
+        
+        logger.info("[ÉTAPE 4/4] Succès - Chargement complété")
+        logger.info("=" * 100)
+        logger.info("✓ Chargement en base de données terminé avec succès")
+        logger.info("=" * 100)
+        
         return {
             "status": "success",
             "message": "Chargement en base de données exécuté avec succès",
-            "logs": result.stdout,
+            "detailed_logs": result.stdout.strip().split('\n') if result.stdout.strip() else [],
+            "return_code": result.returncode,
         }
     
     except subprocess.TimeoutExpired:
-        raise HTTPException(status_code=504, detail="Timeout dépassé (5 minutes)")
+        logger.error("[TIMEOUT] Le chargement a dépassé 300 secondes")
+        logger.error("=" * 100)
+        raise HTTPException(status_code=504, detail="Timeout dépassé (300 secondes)")
     except Exception as e:
-        logger.error(f"Erreur non gérée : {e}")
+        logger.error(f"[ERREUR] Exception non gérée: {e}")
+        logger.error("=" * 100)
         raise HTTPException(status_code=500, detail=f"Erreur : {str(e)}")
 
 

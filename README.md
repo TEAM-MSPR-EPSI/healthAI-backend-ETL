@@ -38,6 +38,18 @@ Exécute le fichier `etl.py` pour extraire et transformer les données.
 
 Réponse : `{ "status": "success", "message": "Pipeline ETL exécuté avec succès", "logs": "..." }`
 
+**1.1 Lancer le Pipeline ETL pour les INGRÉDIENTS**
+
+POST `/etl/extract-transform/ingredient`
+
+Lance uniquement le pipeline ETL pour les ingrédients.
+
+**1.2 Lancer le Pipeline ETL pour les EXERCICES**
+
+POST `/etl/extract-transform/exercice`
+
+Lance uniquement le pipeline ETL pour les exercices.
+
 **2. Charger les Données en BDD**
 
 POST `/etl/load-to-db`
@@ -45,6 +57,18 @@ POST `/etl/load-to-db`
 Exécute le fichier `etl_load.py` pour insérer les données valides en base de données.
 
 Réponse : `{ "status": "success", "message": "Chargement en base de données exécuté avec succès", "logs": "..." }`
+
+**2.1 Charger les INGRÉDIENTS en BDD**
+
+POST `/etl/load-to-db/ingredient`
+
+Charge uniquement les ingrédients en base de données depuis le fichier CSV valide.
+
+**2.2 Charger les EXERCICES en BDD**
+
+POST `/etl/load-to-db/exercice`
+
+Charge uniquement les exercices en base de données depuis le fichier CSV valide.
 
 **4. Vérifier l'état de l'API**
 
@@ -57,6 +81,18 @@ Retourne le statut de l'API.
 GET `/csv`
 
 Liste tous les fichiers CSV disponibles avec leur statut.
+
+**5.1 Lister les fichiers CSV INGRÉDIENTS**
+
+GET `/csv/ingredient`
+
+Liste uniquement les fichiers CSV des ingrédients (valides et rejetés).
+
+**5.2 Lister les fichiers CSV EXERCICES**
+
+GET `/csv/exercice`
+
+Liste uniquement les fichiers CSV des exercices (valides et rejetés).
 
 ## Tester le Workflow
 
@@ -81,6 +117,19 @@ Liste tous les fichiers CSV disponibles avec leur statut.
 - Cliquer sur "Try it out" puis "Execute"
 - Attendre la réponse `"status": "success"`
 
+**Alternative - Lancer les extractions séparément**
+Vous pouvez aussi lancer les pipelines ETL individuellement :
+- `POST /etl/extract-transform/ingredient` - Pour les ingrédients uniquement
+- `POST /etl/extract-transform/exercice` - Pour les exercices uniquement
+
+Puis vérifier les fichiers respectifs :
+- `GET /csv/ingredient` - Vérifier les CSV ingrédients
+- `GET /csv/exercice` - Vérifier les CSV exercices
+
+Et charger les données séparément :
+- `POST /etl/load-to-db/ingredient` - Charger les ingrédients en BDD
+- `POST /etl/load-to-db/exercice` - Charger les exercices en BDD
+
 ### Avec Postman
 
 1. Télécharger Postman depuis https://www.postman.com/downloads/
@@ -101,6 +150,21 @@ Liste tous les fichiers CSV disponibles avec leur statut.
 - Créer une nouvelle requête : POST
 - URL : `http://localhost:8000/etl/load-to-db`
 - Cliquer "Send"
+
+**Alternative - Requests séparées par type**
+Vous pouvez aussi créer des requêtes pour chaque type :
+
+Pour les **INGRÉDIENTS** :
+- `POST http://localhost:8000/etl/extract-transform/ingredient`
+- `GET http://localhost:8000/csv/ingredient`
+- `POST http://localhost:8000/etl/load-to-db/ingredient`
+http://localhost:8000/csv/ingredient
+http://localhost:8000/csv/exercice
+
+Pour les **EXERCICES** :
+- `POST http://localhost:8000/etl/extract-transform/exercice`
+- `GET http://localhost:8000/csv/exercice`
+- `POST http://localhost:8000/etl/load-to-db/exercice`
 
 ### Test GET depuis le navigateur
 
