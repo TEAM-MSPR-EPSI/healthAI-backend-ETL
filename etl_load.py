@@ -77,11 +77,11 @@ def run() -> None:
     #Charge les CSV valides
     ingredient_csv = os.path.join(OUTPUT_DIR, "ingredient_valid.csv")
     exercise_csv = os.path.join(OUTPUT_DIR, "exercise_valid.csv")
-    
-    logger.info("Démarrage du chargement des CSV.")
-    
+        
     try:
+        logger.info("Démarrage du chargement du CSV ingredient.")
         load_csv_to_table(ingredient_csv, "ingredient", engine)
+        logger.info("Démarrage du chargement du CSV exercise.")
         load_csv_to_table(exercise_csv, "sport_exercise", engine)
         logger.info("Chargement terminé avec succès.")
     except Exception as e:
