@@ -12,6 +12,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from etl import etl_ingredient, etl_exercise, run_pipeline, Config
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 #Fonction
@@ -98,6 +99,13 @@ app = FastAPI(
     title="HealthAI ETL API",
     description="API pour orchestrer les pipelines ETL et charger les données",
     version="1.0.0"
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:4200"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 OUTPUT_DIR = Path(__file__).parent
