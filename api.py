@@ -3,16 +3,23 @@ import subprocess
 import logging
 from pathlib import Path
 from typing import List
-import time 
+import time
+import csv
+
 
 from etl_load import load_csv_to_table, Config as LoadConfig
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
 
 from etl import etl_ingredient, etl_exercise, run_pipeline, Config
+from etl_ingredient import validate_ingredients 
+
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+import pandas as pd
+from pydantic import BaseModel
+from typing import Optional
 import uvicorn
 
 #Fonction
@@ -214,10 +221,15 @@ async def list_csv_files_ingredient():
     for name, path in CSV_FILES_INGREDIENT.items():
         if path.exists():
             size = path.stat().st_size
+            rows = []
+            with open(path, newline='', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    rows.append(row)
             csv_status[name] = {
                 "exists": True,
                 "size": f"{size / 1024:.2f} KB",
-                "path": str(path),
+                "data": rows
             }
         else:
             csv_status[name] = {
@@ -230,6 +242,40 @@ async def list_csv_files_ingredient():
         "csv": csv_status
     }
 
+
+class IngredientRow(BaseModel):
+    ingredient_name: str
+    ingredient_energy_100g: Optional[float] = None
+    ingredient_protein_100g: Optional[float] = None
+    ingredient_carbohydrate_100g: Optional[float] = None
+    ingredient_fats_100g: Optional[float] = None
+    ingredient_fiber_100g: Optional[float] = None
+    ingredient_sugars_100g: Optional[float] = None
+    ingredient_salt_100g: Optional[float] = None
+    ingredient_saturated_fats_100g: Optional[float] = None
+    rejection_reason: Optional[str] = None
+
+class IngredientSaveRequest(BaseModel):
+    data: list[IngredientRow]
+
+# ← remplace le PUT /csv/ingredient existant
+@app.put("/csv/ingredient")
+async def save_ingredient_data(payload: IngredientSaveRequest):
+    rows = [row.model_dump() for row in payload.data]
+
+    errors = validate_ingredients(rows)
+    if errors:
+        raise HTTPException(status_code=422, detail=errors)
+
+    df = pd.DataFrame(rows)
+    df.to_csv(OUTPUT_DIR / "ingredient_valid.csv", index=False, encoding="utf-8")
+
+    return {
+        "status": "success",
+        "message": f"{len(rows)} ingrédients sauvegardés",
+    }
+
+
 @app.get("/csv/exercise")
 async def list_csv_files_exercise():
     csv_status = {}
@@ -237,10 +283,15 @@ async def list_csv_files_exercise():
     for name, path in CSV_FILES_EXERCISE.items():
         if path.exists():
             size = path.stat().st_size
+            rows = []
+            with open(path, newline='', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    rows.append(row)
             csv_status[name] = {
                 "exists": True,
                 "size": f"{size / 1024:.2f} KB",
-                "path": str(path),
+                "data": rows
             }
         else:
             csv_status[name] = {
@@ -251,8 +302,11 @@ async def list_csv_files_exercise():
     return {
         "total_files": len(CSV_FILES_EXERCISE),
         "csv": csv_status
-    }
-      
+    }     
+
+@app.put("/csv/exercise")
+async def save_exercise_data(data: dict):
+    pass
 
 @app.post("/etl/load-to-db")
 async def load_csv_to_db():
