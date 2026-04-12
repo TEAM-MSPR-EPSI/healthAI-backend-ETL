@@ -1,6 +1,7 @@
 import os
 import re, logging, unicodedata
 import pandas as pd
+from html.parser import HTMLParser
 
 logger = logging.getLogger("ETL.exercise")
 
@@ -11,6 +12,36 @@ handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] — %(messag
 logger.addHandler(handler)
 
 API_URL = "https://wger.de/api/v2/exerciseinfo/?format=json"
+
+
+class _HTMLStripper(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.parts = []
+
+    def handle_data(self, data):
+        self.parts.append(data)
+
+    def get_text(self):
+        return " ".join(self.parts)
+
+
+def _strip_html(v: str) -> str:
+    if not isinstance(v, str):
+        return v
+    # remplace les balises de liste par des tirets pour garder la structure
+    v = re.sub(r"<li[^>]*>", "- ", v)
+    # remplace les balises de paragraphe/bloc par des espaces
+    v = re.sub(r"</(p|div|ol|ul|br)[^>]*>", " ", v)
+    v = re.sub(r"<br\s*/?>", " ", v)
+    # supprime &nbsp; et autres entités HTML courantes
+    v = v.replace("&nbsp;", " ").replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
+    # supprime toutes les balises restantes
+    stripper = _HTMLStripper()
+    stripper.feed(v)
+    text = stripper.get_text()
+    # nettoie les espaces multiples
+    return re.sub(r" +", " ", text).strip()
 
 
 def _sanitize(v):
@@ -52,6 +83,10 @@ def transform(raw: list[dict]) -> tuple[pd.DataFrame, pd.DataFrame]:
     df = pd.DataFrame(rows)
     for col in ["sport_exercise_name", "sport_exercise_instruction"]:
         df[col] = df[col].map(_sanitize).fillna("")
+
+    # ← nettoyage HTML sur les instructions
+    df["sport_exercise_instruction"] = df["sport_exercise_instruction"].map(_strip_html)
+
     df["sport_exercise_name"] = df["sport_exercise_name"].str.title()
 
     duplicates = df[df.duplicated(subset=["sport_exercise_name"], keep="first")]
