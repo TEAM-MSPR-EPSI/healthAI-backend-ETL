@@ -12,7 +12,8 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
 
 from etl import etl_ingredient, etl_exercise, run_pipeline, Config
-from etl_ingredient import validate_ingredients 
+from etl_ingredient import validate_ingredients
+from etl_exercise import validate_exercises
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse
@@ -258,7 +259,6 @@ class IngredientRow(BaseModel):
 class IngredientSaveRequest(BaseModel):
     data: list[IngredientRow]
 
-# ← remplace le PUT /csv/ingredient existant
 @app.put("/csv/ingredient")
 async def save_ingredient_data(payload: IngredientSaveRequest):
     rows = [row.model_dump() for row in payload.data]
@@ -304,9 +304,29 @@ async def list_csv_files_exercise():
         "csv": csv_status
     }     
 
+class ExerciseRow(BaseModel):
+    sport_exercise_name: str
+    sport_exercise_instruction: Optional[str] = None
+    rejection_reason: Optional[str] = None
+
+class ExerciseSaveRequest(BaseModel):
+    data: list[ExerciseRow]
+
 @app.put("/csv/exercise")
-async def save_exercise_data(data: dict):
-    pass
+async def save_exercise_data(payload: ExerciseSaveRequest):
+    rows = [row.model_dump() for row in payload.data]
+
+    errors = validate_exercises(rows)
+    if errors:
+        raise HTTPException(status_code=422, detail=errors)
+
+    df = pd.DataFrame(rows)
+    df.to_csv(OUTPUT_DIR / "exercise_valid.csv", index=False, encoding="utf-8")
+
+    return {
+        "status": "success",
+        "message": f"{len(rows)} exercices sauvegardés",
+    }
 
 @app.post("/etl/load-to-db")
 async def load_csv_to_db():
