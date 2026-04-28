@@ -2,14 +2,11 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y \
-    gcc \
-    postgresql-client \
-    && rm -rf /var/lib/apt/lists/*
-
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install -r requirements.txt
 
-COPY . .
+COPY etl.py etl_ingredient.py etl_exercise.py etl_load.py api.py ./
 
-CMD ["python", "etl.py"]
+EXPOSE 8000
+
+CMD ["python", "api.py"]
