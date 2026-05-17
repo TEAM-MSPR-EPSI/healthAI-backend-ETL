@@ -259,8 +259,10 @@ async def run_etl(background_tasks: BackgroundTasks):
             ["python", str(OUTPUT_DIR / "etl.py")],
             cwd=str(OUTPUT_DIR), capture_output=True, text=True, timeout=300
         )
-        if result.stdout.strip(): logger.info(result.stdout)
-        if result.stderr.strip(): logger.warning(result.stderr)
+        if result.stdout.strip():
+            logger.info(result.stdout)
+        if result.stderr.strip():
+            logger.warning(result.stderr)
         if result.returncode != 0:
             raise HTTPException(status_code=500, detail=f"Erreur ETL : {result.stderr}")
         return {
@@ -359,8 +361,10 @@ async def load_csv_to_db():
             ["python", str(OUTPUT_DIR / "etl_load.py")],
             cwd=str(OUTPUT_DIR), capture_output=True, text=True, timeout=300
         )
-        if result.stdout.strip(): logger.info(result.stdout)
-        if result.stderr.strip(): logger.warning(result.stderr)
+        if result.stdout.strip():
+            logger.info(result.stdout)
+        if result.stderr.strip():
+            logger.warning(result.stderr)
         if result.returncode != 0:
             raise HTTPException(status_code=500, detail=f"Erreur chargement : {result.stderr}")
         return {

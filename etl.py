@@ -33,7 +33,8 @@ class Config:
     backoff: int = 2
 
 
-class ExtractError(Exception): pass
+class ExtractError(Exception):
+    pass
 
 
 # Appel HTTP avec retry (on réessaie plusieurs fois en cas d'échec) et backoff exponentiel (temps d'attente qui augmente à chaque tentative)
@@ -42,7 +43,7 @@ def fetch(url: str, config: Config) -> dict:
         try:
             auth = None
             if "openfoodfacts.org" in url:
-                headers = {"User-Agent": "HealthAI-ETL - Windows - Version 1.0"}               
+                headers = {"User-Agent": "HealthAI-ETL - Windows - Version 1.0"}
                 # Récupérer les credentials depuis les variables d'environnement
                 api_user = os.getenv("API_USER")
                 api_pass = os.getenv("API_PASSWORD")

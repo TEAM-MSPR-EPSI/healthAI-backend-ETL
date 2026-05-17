@@ -1,5 +1,7 @@
 import os
-import re, logging, unicodedata
+import re
+import logging
+import unicodedata
 import pandas as pd
 
 # Logs dans ingredient.log

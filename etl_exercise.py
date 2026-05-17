@@ -1,6 +1,6 @@
 import os
 import re
-import logging 
+import logging
 import unicodedata
 import pandas as pd
 from html.parser import HTMLParser
