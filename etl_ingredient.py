@@ -2,7 +2,7 @@ import os
 import re, logging, unicodedata
 import pandas as pd
 
-#Logs dans ingredient.log
+# Logs dans ingredient.log
 logger = logging.getLogger("ETL.ingredient")
 
 OUTPUT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -76,6 +76,7 @@ def transform(raw: list[dict]) -> tuple[pd.DataFrame, pd.DataFrame]:
     logger.info(f"ingredient prêt : {len(valid_df)} lignes valides, {len(invalid_df)} rejetées.")
     return valid_df, invalid_df
 
+
 def load(valid_df: pd.DataFrame, invalid_df: pd.DataFrame, engine=None) -> None:
     valid_path = os.path.join(OUTPUT_DIR, "ingredient_valid.csv")
     invalid_path = os.path.join(OUTPUT_DIR, "ingredient_invalid.csv")
@@ -97,6 +98,7 @@ NUMERIC_FIELDS = [
     "ingredient_salt_100g",
     "ingredient_saturated_fats_100g",
 ]
+
 
 def validate_ingredient(row: dict, index: int) -> list[str]:
     errors = []

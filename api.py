@@ -2,7 +2,7 @@ import io
 import subprocess
 import logging
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 import time
 import csv
 
@@ -15,13 +15,12 @@ from etl_ingredient import validate_ingredients
 from etl_exercise import validate_exercises
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks
-from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 from pydantic import BaseModel
 import uvicorn
 
-#Logs
+# Logs
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] — %(message)s",
@@ -61,7 +60,7 @@ CSV_FILES_EXERCISE = {
 }
 
 
-# ← fonction générique pour lire un CSV
+# Fonction générique pour lire un CSV
 def _read_csv(path: Path) -> list[dict]:
     if not path.exists():
         return []
@@ -69,7 +68,7 @@ def _read_csv(path: Path) -> list[dict]:
         return list(csv.DictReader(f))
 
 
-# ← fonction générique pour classifier et sauvegarder un élément
+# Fonction générique pour classifier et sauvegarder un élément
 def _save_and_classify(
     row: dict,
     name_field: str,
@@ -81,7 +80,7 @@ def _save_and_classify(
 ) -> str:
     name = row.get(name_field, "").strip()
 
-    # 🔍 Détection des champs invalides
+    # Détection des champs invalides
     invalid_reasons = [
         f"{f} manquant ou vide"
         for f in valid_fields
@@ -94,11 +93,11 @@ def _save_and_classify(
     invalid_df = pd.read_csv(invalid_path, encoding="utf-8") if invalid_path.exists() else pd.DataFrame(columns=invalid_columns)
 
     if is_now_valid:
-        # retire de l'invalide
+        # Retire de l'invalide
         was_in_invalid = name in invalid_df[name_field].values
         invalid_df = invalid_df[invalid_df[name_field] != name]
 
-        # ajoute ou met à jour dans le valide
+        # Ajoute ou met à jour dans le valide
         valid_df = valid_df[valid_df[name_field] != name]
         new_row = pd.DataFrame([{f: row.get(f) for f in valid_columns}])
         valid_df = pd.concat([valid_df, new_row], ignore_index=True)
@@ -109,7 +108,7 @@ def _save_and_classify(
             message = f"✅ '{name}' ajouté à la liste valide"
 
     else:
-        # met à jour dans l'invalide
+        # Met à jour dans l'invalide
         if name in invalid_df[name_field].values:
             for f in valid_fields:
                 invalid_df.loc[invalid_df[name_field] == name, f] = row.get(f)
@@ -129,7 +128,8 @@ def _save_and_classify(
 
     return message
 
-# ← fonction générique pour lister les CSV avec data
+
+# Fonction générique pour lister les CSV avec data
 def _list_csv_with_data(csv_files: dict) -> dict:
     csv_status = {}
     for name, path in csv_files.items():
@@ -216,7 +216,7 @@ def _run_load_direct(table_name: str, csv_filename: str):
     }
 
 
-# ── Modèles Pydantic ──────────────────────────────────────────────────────────
+# Modèles Pydantic
 
 class IngredientRow(BaseModel):
     ingredient_name: str
@@ -230,19 +230,22 @@ class IngredientRow(BaseModel):
     ingredient_saturated_fats_100g: Optional[float] = None
     rejection_reason: Optional[str] = None
 
+
 class IngredientSaveRequest(BaseModel):
     data: list[IngredientRow]
+
 
 class ExerciseRow(BaseModel):
     sport_exercise_name: str
     sport_exercise_instruction: Optional[str] = None
     rejection_reason: Optional[str] = None
 
+
 class ExerciseSaveRequest(BaseModel):
     data: list[ExerciseRow]
 
 
-# ── Routes ────────────────────────────────────────────────────────────────────
+# Routes
 
 @app.get("/health")
 async def health_check():

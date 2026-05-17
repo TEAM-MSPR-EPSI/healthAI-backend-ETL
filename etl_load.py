@@ -1,4 +1,6 @@
-import os, sys, logging
+import os
+import sys
+import logging
 from dataclasses import dataclass
 
 import pandas as pd
@@ -8,7 +10,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-#Logs
+# Logs
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] — %(message)s",
@@ -35,18 +37,14 @@ def load_csv_to_table(csv_path: str, table_name: str, engine) -> None:
         logger.error(f"Fichier CSV introuvable : {csv_path}")
         return
 
-    df = pd.read_csv(csv_path, encoding="utf-8")
-    
+    df = pd.read_csv(csv_path, encoding="utf-8")  
     if df.empty:
         logger.warning(f"CSV vide, rien à insérer dans '{table_name}' : {csv_path}")
         return
-    
     logger.info(f"Chargement de {len(df)} lignes depuis {os.path.basename(csv_path)} vers '{table_name}'...")
-    
     cols = ", ".join(df.columns)
     vals = ", ".join(f":{c}" for c in df.columns)
-    sql = text(f"INSERT INTO {table_name} ({cols}) VALUES ({vals}) ON CONFLICT DO NOTHING")
-    
+    sql = text(f"INSERT INTO {table_name} ({cols}) VALUES ({vals}) ON CONFLICT DO NOTHING") 
     try:
         with engine.begin() as conn:
             result = conn.execute(sql, df.to_dict(orient="records"))
@@ -60,24 +58,19 @@ def load_csv_to_table(csv_path: str, table_name: str, engine) -> None:
 
 def run() -> None:
     config = Config()
-    
     try:
         engine = create_engine(config.db_url)
-        logger.info(f"Connexion établie avec {config.db_url}")
-        
-        #Test de connexion
+        logger.info(f"Connexion établie avec {config.db_url}") 
+        # Test de connexion
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
-        logger.info("Connexion vérifiée.")
-        
+        logger.info("Connexion vérifiée.")    
     except SQLAlchemyError as e:
         logger.error(f"Impossible de se connecter à la base de données : {e}")
-        return
-    
-    #Charge les CSV valides
+        return   
+    # Charge les CSV valides
     ingredient_csv = os.path.join(OUTPUT_DIR, "ingredient_valid.csv")
-    exercise_csv = os.path.join(OUTPUT_DIR, "exercise_valid.csv")
-        
+    exercise_csv = os.path.join(OUTPUT_DIR, "exercise_valid.csv")     
     try:
         logger.info("Démarrage du chargement du CSV ingredient.")
         load_csv_to_table(ingredient_csv, "ingredient", engine)
