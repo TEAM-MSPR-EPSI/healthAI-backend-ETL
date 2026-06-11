@@ -1,4 +1,7 @@
-import os, sys, time, logging
+import os
+import sys
+import time
+import logging
 from dataclasses import dataclass
 
 import requests
@@ -9,7 +12,7 @@ import etl_exercise
 
 load_dotenv()
 
-#Log en console uniquement (chaque module gère son propre fichier de log)
+# Log en console uniquement (chaque module gère son propre fichier de log)
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] — %(message)s",
@@ -18,7 +21,7 @@ logging.basicConfig(
 logger = logging.getLogger("ETL")
 
 
-#Connexion BDD
+# Connexion BDD
 @dataclass
 class Config:
     db_url:  str = (
@@ -30,17 +33,17 @@ class Config:
     backoff: int = 2
 
 
-class ExtractError(Exception): pass
+class ExtractError(Exception):
+    pass
 
 
-#Appel HTTP avec retry (on réessaie plusieurs fois en cas d'échec) et backoff exponentiel (temps d'attente qui augmente à chaque tentative)
+# Appel HTTP avec retry (on réessaie plusieurs fois en cas d'échec) et backoff exponentiel (temps d'attente qui augmente à chaque tentative)
 def fetch(url: str, config: Config) -> dict:
     for attempt in range(1, config.retries + 1):
         try:
             auth = None
             if "openfoodfacts.org" in url:
                 headers = {"User-Agent": "HealthAI-ETL - Windows - Version 1.0"}
-                
                 # Récupérer les credentials depuis les variables d'environnement
                 api_user = os.getenv("API_USER")
                 api_pass = os.getenv("API_PASSWORD")
@@ -48,7 +51,6 @@ def fetch(url: str, config: Config) -> dict:
                     auth = (api_user, api_pass)
             else:
                 headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"}
-            
             r = requests.get(url, timeout=config.timeout, headers=headers, auth=auth)
             r.raise_for_status()
             return r.json()
@@ -64,13 +66,13 @@ def fetch(url: str, config: Config) -> dict:
     raise ExtractError(f"Echec après {config.retries} tentatives.")
 
 
-#Pagination automatique jusqu'à max_results enregistrements
+# Pagination automatique jusqu'à max_results enregistrements
 def extract(url: str, config: Config, max_results: int = 200) -> list[dict]:
-    data    = fetch(url, config)
+    data = fetch(url, config)
     records = data.get("products") or data.get("results") or data
 
     while len(records) < max_results and data.get("next"):
-        data     = fetch(data["next"], config)
+        data = fetch(data["next"], config)
         records += data.get("results", [])
 
     records = records[:max_results]
@@ -78,8 +80,8 @@ def extract(url: str, config: Config, max_results: int = 200) -> list[dict]:
     return records
 
 
-#Exécution d'un pipeline : extract -> transform -> load
-#Si un ETL échoue, le suivant est quand meme exécuté
+# Exécution d'un pipeline : extract -> transform -> load
+# Si un ETL échoue, le suivant est quand meme exécuté
 def run_pipeline(name: str, etl_module, config: Config, engine) -> None:
     mod_logger = logging.getLogger(f"ETL.{name}")
     mod_logger.info(f"Démarrage du pipeline ETL ({name}).")
@@ -99,11 +101,12 @@ def run_pipeline(name: str, etl_module, config: Config, engine) -> None:
 def run() -> None:
     config = Config()
 
-    #Insertion BDD temporairement désactivée (remplacée par export CSV)
+    # Insertion BDD temporairement désactivée (remplacée par export CSV)
     engine = None
 
     run_pipeline("ingredient", etl_ingredient, config, engine)
     run_pipeline("exercise",   etl_exercise,   config, engine)
+
 
 if __name__ == "__main__":
     run()
