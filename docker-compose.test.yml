@@ -1,0 +1,35 @@
+services:
+  database:
+    image: postgres:15-alpine
+    container_name: postgres_db
+    environment:
+      POSTGRES_DB: testdb
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testpassword
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U testuser -d testdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  etl_backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: etl_backend
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://testuser:testpassword@database:5432/testdb
+    volumes:
+      - .:/app
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - app_network
+
+networks:
+  app_network:

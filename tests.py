@@ -1,9 +1,8 @@
 # Lancer avec : pytest test_etl.py -v
 
-import os
 import pytest
 import pandas as pd
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import patch, MagicMock
 
 import requests
 
@@ -11,6 +10,9 @@ import etl_ingredient
 import etl_exercise
 import etl
 import etl_load
+
+from fastapi.testclient import TestClient
+from api import app
 
 
 # Fixtures — données de test réutilisables
@@ -32,6 +34,7 @@ def ingredient_valide():
         }
     }
 
+
 @pytest.fixture
 def ingredient_sans_nom():
     """Un ingrédient sans nom produit."""
@@ -49,6 +52,7 @@ def ingredient_sans_nom():
         }
     }
 
+
 @pytest.fixture
 def ingredient_sans_nutriments():
     """Un ingrédient avec tous les nutriments absents."""
@@ -56,6 +60,7 @@ def ingredient_sans_nutriments():
         "product_name": "Produit mystère",
         "nutriments": {}
     }
+
 
 @pytest.fixture
 def exercise_valide_fr():
@@ -67,6 +72,7 @@ def exercise_valide_fr():
         ]
     }
 
+
 @pytest.fixture
 def exercise_valide_en_seulement():
     """Un exercice avec uniquement la traduction anglaise (language=2)."""
@@ -76,6 +82,7 @@ def exercise_valide_en_seulement():
         ]
     }
 
+
 @pytest.fixture
 def exercise_sans_traduction():
     """Un exercice sans aucune traduction FR ni EN."""
@@ -84,6 +91,7 @@ def exercise_sans_traduction():
             {"language": 9, "name": "Kniebeugen", "description": "Knie beugen."},
         ]
     }
+
 
 @pytest.fixture
 def exercise_avec_html():
@@ -742,8 +750,6 @@ class TestLoadCsvToTable:
 # FastAPI fournit un TestClient qui simule de vraies requêtes HTTP sans lancer de serveur.
 # Les tests API sont organisés par route, dans le même ordre que l'API.
 
-from fastapi.testclient import TestClient
-from api import app
 
 # Le client est instancié une seule fois et réutilisé dans tous les tests API.
 # raise_server_exceptions=True (défaut) fait remonter les erreurs Python comme de vraies exceptions plutôt que de les avaler silencieusement.
@@ -1099,7 +1105,7 @@ class TestSaveAndClassify:
     from pathlib import Path
 
     # Colonnes utilisées dans les tests
-    VALID_COLS   = ["ingredient_name", "ingredient_energy_100g"]
+    VALID_COLS = ["ingredient_name", "ingredient_energy_100g"]
     INVALID_COLS = ["ingredient_name", "ingredient_energy_100g", "rejection_reason"]
     VALID_FIELDS = ["ingredient_energy_100g"]
 
@@ -1119,7 +1125,8 @@ class TestSaveAndClassify:
 
     def test_nouvel_element_valide_va_dans_valid_csv(self, tmp_path):
         """Un élément valide doit être écrit dans valid.csv."""
-        msg = self._run(tmp_path, {"ingredient_name": "Pomme", "ingredient_energy_100g": 52})
+        self._run(tmp_path, {"ingredient_name": "Pomme", "ingredient_energy_100g": 52})
+
         valid_df = pd.read_csv(tmp_path / "valid.csv")
         assert len(valid_df) == 1
         assert valid_df.iloc[0]["ingredient_name"] == "Pomme"
@@ -1131,7 +1138,8 @@ class TestSaveAndClassify:
 
     def test_element_invalide_va_dans_invalid_csv(self, tmp_path):
         """Un élément avec champ manquant doit aller dans invalid.csv."""
-        msg = self._run(tmp_path, {"ingredient_name": "Pomme", "ingredient_energy_100g": None})
+        self._run(tmp_path, {"ingredient_name": "Pomme", "ingredient_energy_100g": None})
+
         invalid_df = pd.read_csv(tmp_path / "invalid.csv")
         assert len(invalid_df) == 1
 
@@ -1142,8 +1150,6 @@ class TestSaveAndClassify:
 
     def test_element_invalide_existant_est_mis_a_jour(self, tmp_path):
         """Un élément invalide déjà présent doit être mis à jour, pas dupliqué."""
-        from pathlib import Path
-        # Création d'un invalid.csv avec "Pomme" dedans
         invalid_df = pd.DataFrame([{
             "ingredient_name": "Pomme",
             "ingredient_energy_100g": None,
@@ -1158,8 +1164,6 @@ class TestSaveAndClassify:
 
     def test_element_corrige_passe_de_invalid_a_valid(self, tmp_path):
         """Un élément précédemment invalide qui devient valide doit être déplacé."""
-        from pathlib import Path
-        # "Pomme" est d'abord dans invalid.csv
         invalid_df = pd.DataFrame([{
             "ingredient_name": "Pomme",
             "ingredient_energy_100g": None,
@@ -1169,7 +1173,7 @@ class TestSaveAndClassify:
 
         msg = self._run(tmp_path, {"ingredient_name": "Pomme", "ingredient_energy_100g": 52})
 
-        valid_df   = pd.read_csv(tmp_path / "valid.csv")
+        valid_df = pd.read_csv(tmp_path / "valid.csv")
         invalid_df = pd.read_csv(tmp_path / "invalid.csv")
 
         assert len(valid_df[valid_df["ingredient_name"] == "Pomme"]) == 1
