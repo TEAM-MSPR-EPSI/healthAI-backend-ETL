@@ -1125,6 +1125,8 @@ class TestSaveAndClassify:
 
     def test_nouvel_element_valide_va_dans_valid_csv(self, tmp_path):
         """Un élément valide doit être écrit dans valid.csv."""
+        self._run(tmp_path, {"ingredient_name": "Pomme", "ingredient_energy_100g": 52})
+
         valid_df = pd.read_csv(tmp_path / "valid.csv")
         assert len(valid_df) == 1
         assert valid_df.iloc[0]["ingredient_name"] == "Pomme"
@@ -1136,6 +1138,8 @@ class TestSaveAndClassify:
 
     def test_element_invalide_va_dans_invalid_csv(self, tmp_path):
         """Un élément avec champ manquant doit aller dans invalid.csv."""
+        self._run(tmp_path, {"ingredient_name": "Pomme", "ingredient_energy_100g": None})
+
         invalid_df = pd.read_csv(tmp_path / "invalid.csv")
         assert len(invalid_df) == 1
 
@@ -1146,7 +1150,6 @@ class TestSaveAndClassify:
 
     def test_element_invalide_existant_est_mis_a_jour(self, tmp_path):
         """Un élément invalide déjà présent doit être mis à jour, pas dupliqué."""
-        # Création d'un invalid.csv avec "Pomme" dedans
         invalid_df = pd.DataFrame([{
             "ingredient_name": "Pomme",
             "ingredient_energy_100g": None,
@@ -1161,7 +1164,6 @@ class TestSaveAndClassify:
 
     def test_element_corrige_passe_de_invalid_a_valid(self, tmp_path):
         """Un élément précédemment invalide qui devient valide doit être déplacé."""
-        # "Pomme" est d'abord dans invalid.csv
         invalid_df = pd.DataFrame([{
             "ingredient_name": "Pomme",
             "ingredient_energy_100g": None,
