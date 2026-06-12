@@ -3,13 +3,13 @@ services:
     image: postgres:15-alpine
     container_name: postgres_db
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: testdb
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testpassword
     networks:
       - app_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U testuser"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -21,6 +21,8 @@ services:
     container_name: etl_backend
     env_file:
       - .env
+    environment:
+      DATABASE_URL: postgresql://testuser:testpassword@database:5432/testdb
     volumes:
       - .:/app
     depends_on:
