@@ -75,3 +75,12 @@ jobs:
       - name: Stop containers
         if: always()
         run: docker compose -f docker-compose.test.yml down
+
+      - name: Debug - inspect .env file
+        run: |
+          echo "Nombre de lignes :"
+          wc -l .env
+          echo "Noms des variables :"
+          cut -d'=' -f1 .env
+          echo "Contient POSTGRES_* ?"
+          grep -c '^POSTGRES_' .env || echo "0 trouvé"
